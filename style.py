@@ -7,7 +7,7 @@ from argparse import ArgumentParser
 from utils import save_img, get_img, exists, list_files
 import evaluate
 
-CONTENT_WEIGHT = 7.5e0
+CONTENT_WEIGHT = 1.5e1
 STYLE_WEIGHT = 1e2
 TV_WEIGHT = 2e2
 
@@ -15,8 +15,8 @@ LEARNING_RATE = 1e-3
 NUM_EPOCHS = 2
 CHECKPOINT_DIR = 'checkpoints'
 CHECKPOINT_ITERATIONS = 2000
-VGG_PATH = 'data/imagenet-vgg-verydeep-19.mat'
-TRAIN_PATH = 'data/train2014'
+VGG_PATH = '/input/imagenet-vgg-verydeep-19.mat'
+TRAIN_PATH = '/input/train2014'
 BATCH_SIZE = 4
 DEVICE = '/gpu:0'
 FRAC_GPU = 1
@@ -60,6 +60,11 @@ def build_parser():
                         metavar='CHECKPOINT_ITERATIONS',
                         default=CHECKPOINT_ITERATIONS)
 
+    parser.add_argument('--total-iterations', type=int,
+                        dest='total_iterations', help='total iterations to run',
+                        metavar='TOTAL_ITERATIONS',
+                        default=-1)
+
     parser.add_argument('--vgg-path', type=str,
                         dest='vgg_path',
                         help='path to VGG19 network (default %(default)s)',
@@ -84,6 +89,14 @@ def build_parser():
                         dest='learning_rate',
                         help='learning rate (default %(default)s)',
                         metavar='LEARNING_RATE', default=LEARNING_RATE)
+
+    parser.add_argument('--device', type=str,
+                        help='tensorflow device to use /cpu:0 or /gpu:0',
+                        metavar='DEVICE', default=DEVICE)
+
+    parser.add_argument('--base-model-path', type=str,
+                        help='pre-trained model to start from',
+                        metavar='BASE-MODEL-PATH', default=None)
 
     return parser
 
@@ -126,7 +139,10 @@ def main():
         "print_iterations":options.checkpoint_iterations,
         "batch_size":options.batch_size,
         "save_path":os.path.join(options.checkpoint_dir,'fns.ckpt'),
-        "learning_rate":options.learning_rate
+        "learning_rate":options.learning_rate,
+        "device":options.device,
+        "total_iterations":options.total_iterations,
+        "base_model_path":options.base_model_path,
     }
 
     if options.slow:
@@ -150,6 +166,7 @@ def main():
         print('Epoch %d, Iteration: %d, Loss: %s' % (epoch, i, loss))
         to_print = (style_loss, content_loss, tv_loss)
         print('style: %s, content:%s, tv: %s' % to_print)
+        sys.stdout.flush()
         if options.test:
             assert options.test_dir != False
             preds_path = '%s/%s_%s.png' % (options.test_dir,epoch,i)
